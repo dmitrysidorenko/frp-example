@@ -1,0 +1,22 @@
+{
+  "name": "frp-example",
+  "version": "0.1.0",
+  "private": true,
+  "devDependencies": {
+    "react-scripts": "0.8.4"
+  },
+  "dependencies": {
+    "@cycle/http": "^11.2.0",
+    "@cycle/xstream-run": "^4.1.0",
+    "ramda": "^0.22.1",
+    "react": "^15.4.1",
+    "react-dom": "^15.4.1",
+    "xstream": "^9.2.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject"
+  }
+}
