@@ -2,93 +2,54 @@ import xs from 'xstream';
 import React from 'react';
 import R from 'ramda';
 import User from '../User';
-import Validator from '../Validator';
-import Search from '../Search';
+import Playlists from '../Playlists';
+
+const getRoles = R.ifElse(R.is(Object), R.prop('roles'), R.always([]));
 
 const BaseComponent = (sources) => {
-    const {Interact} = sources;
-    const user = User({...sources, signIn$: xs.empty()});
-    const text$ = Interact.get('text').map(R.path(['target', 'value'])).startWith('');
-    const validator = Validator({
-        Interact: Interact.isolate(),
-        config$: xs.of([true, true]),
-        validators$: xs.of([
-            {label: 'Required', fn: v => !v ? 'Reuired field' : ''},
-            {label: 'Number', fn: v => /^\d+$/.test(v) ? '' : 'Should be a number'}
-        ])
-    });
-    const filters$ = xs.of({
-        'Category1': {
-            label: 'First category'
-        },
-        'Category2': {
-            label: 'Second category'
-        },
-        'Category3': {
-            label: 'Third category'
-        }
-    });
-    const selectedFilters$ = xs.of({'Category2': true});
-    const search = Search({
-        Interact,
-        term$: xs.empty(),
-        filters$,
-        selectedFilters$
-    });
-    const {view$, msgsViewFn$} = validator;
-    const searchView$ = xs.combine(
-        search.searchTermView$,
-        search.filtersView$,
-        search.term$
-    ).map(([
-        searchTermView,
-        filtersView
-    ]) => (
-        <div style={{border:'3px dotted #ddd', padding: 10, display: 'inline-flex', flexDirection: 'column'}}>
-            {searchTermView}
-            {filtersView}
-        </div>
-    ));
+  const { Interact } = sources;
+  const user = User({ ...sources, signIn$: xs.empty() });
+  const user$ = user.user$;
+  const roles$ = user$.map(getRoles).debug('roles');
+  const isPublisher$ = roles$.map(R.contains('pb')).startWith(false);
+  const isAdmin$ = roles$.map(R.contains('admin')).startWith(false);
+  const userId$ = user$.filter(R.is(Object)).map(R.prop('id')).remember();
+  const adminView$ = isAdmin$.map(R.ifElse(R.equals(true), R.always(<h2>
+    Admin Panel [soon]</h2>), R.always(null)));
 
-    return {
-        DOM: xs
-            .combine(
-                user.userView$,
-                user.signInView$,
-                view$,
-                msgsViewFn$,
-                text$,
-                searchView$,
-                search.term$
-            )
-            .map(([
-                UserView,
-                signInView,
-                view,
-                Error,
-                text,
-                searchView,
-                searchTerm
-            ]) => (
-                <div>
-                    User
-                    <hr/>
-                    {searchView}
-                    <div>Search term: {searchTerm}</div>
-                    <div>
-                        <input value={text} onChange={Interact.cb('text')} />
-                    </div>
-                    {view}
-                    <Error text={text} />
-                    <hr/>
-                    <div>
-                        <UserView />
-                    </div>
-                    {signInView}
-                </div>
-            )),
-        HTTP: user.HTTP
-    };
+  const playlists = Playlists({
+    Interact: Interact.isolate(),
+    userId$,
+    HTTP: sources.HTTP
+  });
+  const playlistsView$ = xs
+    .combine(playlists.view$, isPublisher$)
+    .map(([view, isPublisher]) => (R.ifElse(R.equals(true), R.always(view), R.always(null))(isPublisher)));
+  const httpSink$ = xs.merge(user.HTTP, playlists.HTTP);
+  return {
+    DOM: xs
+      .combine(
+        adminView$.debug('adminview'),
+        user.userView$,
+        playlistsView$
+      )
+      .map(([
+        adminView$,
+        UserView,
+        playlistsView
+      ]) => (
+        <div>
+          <section>
+            {UserView}
+            {adminView$}
+          </section>
+          <section>
+            {playlistsView}
+          </section>
+        </div>
+      )),
+    HTTP: httpSink$.debug('HTTP')
+  };
 };
 
 export default BaseComponent;
