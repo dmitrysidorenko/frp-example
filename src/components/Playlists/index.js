@@ -25,12 +25,10 @@ const Playlists = (sources) => {
   const responsePlaylists$ = HTTP.select('load-playlists').flatten();
   const playlists$ = responsePlaylists$
     .map(convertResponse)
-    .debug('response')
     .startWith([]);
 
   return {
-    view$: playlists$
-      .map(view),
+    view$: playlists$.map(view),
     HTTP: requestForPlaylists$
   };
 };

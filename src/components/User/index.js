@@ -3,93 +3,155 @@ import dropRepeats from 'xstream/extra/dropRepeats';
 import React from 'react';
 import R from 'ramda';
 import SignIn from './ui/SignIn';
+import EditRoles from './ui/EditRoles';
+import UserInfo from './ui/UserInfo';
 
-const SIGN_IN_REQUEST_CATEGORY = 'sign-in';
-const SIGN_OUT_REQUEST_CATEGORY = 'sign-out';
-const SIGN_IN_URL = 'http://www.mocky.io/v2/5857f745120000f90ec8aeb6';
-
-const getValue = R.path(['target', 'value']);
-
-const makeUser = JSON.parse;
-
-const model = ({ changeLogin$, changePassword$, signInResponse$, signOutResponse$ }) => {
-  const user$ = xs.merge(signOutResponse$.mapTo(null), signInResponse$.map(makeUser));
-  return xs
-    .combine(
-      changeLogin$.map(getValue).startWith(''),
-      changePassword$.map(getValue).startWith(''),
-      user$.startWith(null)
-    )
-    .map(([login, password, user]) => ({
-      credentials: { login, password },
-      user
-    }))
-    .remember();
+// constants
+export const SIGN_IN_REQUEST_CATEGORY = 'sign-in';
+export const SIGN_OUT_REQUEST_CATEGORY = 'sign-out';
+export const REMOVE_ROLE_REQUEST_CATEGORY = 'remove-user-role';
+const SIGN_IN_URL = '/auth/sign-in';
+const SIGN_OUT_URL = '/auth/sign-out';
+const SIGN_IN_EVENT = 'SIGN_IN_EVENT';
+const SIGN_OUT_EVENT = 'SIGN_OUT_EVENT';
+const LOGIN_CHANGED_EVENT = 'CHANGE_LOGIN_EVENT';
+const PASSWORD_CHANGED_EVENT = 'CHANGE_PASSWORD_EVENT';
+const REMOVE_ROLE_EVENT = 'REMOVE_ROLE_EVENT';
+// helpers
+const getTargetValue = R.path(['target', 'value']);
+const convertUserFromServerResponse = JSON.parse;
+const extractUserFromState = R.prop('user');
+const extractRolesFromUser = R.prop('roles');
+// state
+const makeState = ({changeLogin$, changePassword$, signInResponse$, signOutResponse$, removeUserRoleResponse$}) => {
+    const user$ = xs.merge(signOutResponse$.mapTo(null), xs.merge(signInResponse$, removeUserRoleResponse$).map(convertUserFromServerResponse));
+    const signInFormData$ = xs.combine(
+        changeLogin$.map(getTargetValue).startWith(''),
+        changePassword$.map(getTargetValue).startWith(''),
+    ).map(([login, password]) => ({login, password}));
+    return xs
+        .combine(
+            signInFormData$,
+            user$.startWith(null)
+        )
+        .map(([signInFormData, user]) => ({
+            signInFormData,
+            user
+        }))
+        .remember();
 };
-
-const User = (sources) => {
-  const { HTTP, signIn$:signInInput$, Interact } = sources;
-  const signInResponse$ = HTTP
-    .select(SIGN_IN_REQUEST_CATEGORY)
-    .flatten();
-  const signOutResponse$ = HTTP
-    .select(SIGN_OUT_REQUEST_CATEGORY)
-    .flatten();
-  const signIn$ = Interact.get('SignIn');
-  const signOut$ = Interact.get('SignOut');
-  const changeLogin$ = Interact.get('login');
-  const changePassword$ = Interact.get('password');
-  const state$ = model({
-    changeLogin$,
-    changePassword$,
-    signInResponse$,
-    signOutResponse$
-  });
-  const user$ = state$.map(R.prop('user')).compose(dropRepeats()).remember();
-
-  const signInView$ = state$
-    .map(R.prop('credentials'))
-    .map(props => ({
-      ...props,
-      onLoginChange: Interact.cb('login'),
-      onPasswordChange: Interact.cb('password'),
-      onSubmit: Interact.cb('SignIn')
+// views
+const makeSignInView = (state$, Interact) => state$
+    .map(R.prop('signInFormData'))
+    .map(signInFormData => ({
+        login: signInFormData.login,
+        password: signInFormData.password,
+        onLoginChange: Interact.cb(LOGIN_CHANGED_EVENT),
+        onPasswordChange: Interact.cb(PASSWORD_CHANGED_EVENT),
+        onSubmit: Interact.cb(SIGN_IN_EVENT)
     }))
-    .map(SignIn);
-
-  const userView$ = xs.combine(user$, signInView$)
-    .map(([user, signInView]) => {
-      if (user) {
-        return (<div>
-          <div>{user.firstName} {user.lastName}</div>
-          <button onClick={Interact.cb('SignOut')}>Sign out</button>
-        </div>);
-      } else {
-        return (signInView);
-      }
-    });
-
-  const signInRequest$ = xs.merge(signInInput$, signIn$)
-    .map(({ login, password }) => {
-      return {
-        category: SIGN_IN_REQUEST_CATEGORY,
-        data: { login, password },
-        url: SIGN_IN_URL,
-        method: 'GET'
-      };
-    });
-  const signOutRequest$ = signOut$.mapTo({
-    category: 'sign-out',
+    .map(SignIn)
+    .remember();
+const makeUserInfoView = (user$, Interact) => user$
+    .filter(R.is(Object))
+    .map(user => ({user, onSignOut: Interact.cb(SIGN_OUT_EVENT)}))
+    .map(UserInfo)
+    .startWith(null)
+    .remember();
+const makeUserView = (user$, userInfoView$, signInView$) => xs
+    .combine(user$, userInfoView$, signInView$)
+    .map(([user, userInfoView, signInView]) => R.ifElse(
+        R.is(Object),
+        R.always(userInfoView),
+        R.always(signInView)
+    )(user))
+    .remember();
+const makeEditRolesView = (Interact, roles$) => roles$
+    .map(roles => ({roles, onRemove: Interact.cb(REMOVE_ROLE_EVENT)}))
+    .map(EditRoles);
+// ajax
+const makeSignInRequest = signIn$ => signIn$.map(({login, password}) => ({
+    category: SIGN_IN_REQUEST_CATEGORY,
+    data: {login, password},
+    url: SIGN_IN_URL,
+    method: 'GET'
+}));
+const makeSignOutRequest = signOut$ => signOut$.mapTo({
+    category: SIGN_OUT_REQUEST_CATEGORY,
     method: 'POST',
-    url: '/auth/sign-out'
-  });
-  return {
-    user$,
-    roles$: user$.map(R.prop('roles')),
-    userView$: userView$,
-    signInView$: signInView$,
-    HTTP: xs.merge(signInRequest$, signOutRequest$)
-  };
+    url: SIGN_OUT_URL
+});
+const makeRemoveRoleRequest = R.map(({userId, roleId}) => ({
+        category: REMOVE_ROLE_REQUEST_CATEGORY,
+        url: `/users/${userId}/roles/${roleId}`,
+        method: 'DELETE'
+    }));
+const getSignInResponse = HTTP => HTTP.select(SIGN_IN_REQUEST_CATEGORY).flatten();
+const getSignOutResponse = HTTP => HTTP.select(SIGN_OUT_REQUEST_CATEGORY).flatten();
+const getRemoveUserRoleResponse = HTTP => HTTP.select(REMOVE_ROLE_REQUEST_CATEGORY).flatten();
+/**
+ * Module provides User features
+ * @param sources
+ * @returns {{
+ *  user$: (MemoryStream<Object|null>),
+ *  roles$: (MemoryStream<string[]>),
+ *  userView$: Stream<ReactElement>,
+ *  signInView$: Stream<ReactElement>,
+ *  editRolesView$: Stream<ReactElement>,
+ *  HTTP: Stream<Object>
+ * }}
+ */
+const User = sources => {
+    // input
+    const {HTTP, signIn$:signInInput$, Interact} = sources;
+    // ajax responses
+    const signInResponse$ = getSignInResponse(HTTP);
+    const signOutResponse$ = getSignOutResponse(HTTP);
+    const removeUserRoleResponse$ = getRemoveUserRoleResponse(HTTP);
+    // user actions
+    const signIn$ = Interact.get(SIGN_IN_EVENT);
+    const signOut$ = Interact.get(SIGN_OUT_EVENT);
+    const changeLogin$ = Interact.get(LOGIN_CHANGED_EVENT);
+    const changePassword$ = Interact.get(PASSWORD_CHANGED_EVENT);
+    const removeRole$ = Interact.get(REMOVE_ROLE_EVENT).map(getTargetValue);
+    // state
+    const state$ = makeState({
+        changeLogin$,
+        changePassword$,
+        signInResponse$,
+        signOutResponse$,
+        removeUserRoleResponse$
+    });
+    const user$ = state$.map(extractUserFromState).compose(dropRepeats()).remember();
+    const userId$ = user$.filter(R.is(Object)).map(R.prop('id')).remember();
+    const roles$ = user$.map(user => {
+        if (user) {
+            return extractRolesFromUser(user)
+        }
+        return [];
+    }).remember();
+    // views
+    const signInView$ = makeSignInView(state$, Interact);
+    const userInfoView$ = makeUserInfoView(user$, Interact);
+    const userView$ = makeUserView(user$, userInfoView$, signInView$);
+    const editRolesView$ = makeEditRolesView(Interact, roles$);
+    // ajax requests
+    const signInRequest$ = makeSignInRequest(xs.merge(signInInput$, signIn$));
+    const signOutRequest$ = makeSignOutRequest(signOut$);
+    const removeRoleRequest$ = makeRemoveRoleRequest(userId$.map(userId => removeRole$.map(roleId => ({
+        userId,
+        roleId
+    }))).flatten());
+    const httpSink$ = xs.merge(signInRequest$, signOutRequest$, removeRoleRequest$);
+    // output
+    return {
+        user$,
+        roles$,
+        userView$,
+        signInView$,
+        editRolesView$,
+        HTTP: httpSink$
+    };
 };
 
 export default User;
