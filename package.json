@@ -8,9 +8,11 @@
   "dependencies": {
     "@cycle/http": "^11.2.0",
     "@cycle/xstream-run": "^4.1.0",
+    "cyclic-router": "^3.0.1",
     "ramda": "^0.22.1",
     "react": "^15.4.1",
     "react-dom": "^15.4.1",
+    "switch-path": "^1.2.0",
     "xstream": "^9.2.0"
   },
   "scripts": {
