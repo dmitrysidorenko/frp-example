@@ -5,4 +5,4 @@ node_js: 6
 cache: node_modules
 env:
   CI: travis
-script: npm run test && npm run build
+script: npm run build
