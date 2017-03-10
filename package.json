@@ -7,6 +7,7 @@
   },
   "dependencies": {
     "@cycle/http": "^11.2.0",
+    "@cycle/isolate": "^2.0.0",
     "@cycle/xstream-run": "^4.1.0",
     "cyclic-router": "^3.0.1",
     "ramda": "^0.22.1",

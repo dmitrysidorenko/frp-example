@@ -5,17 +5,18 @@ import {makeHTTPDriver} from '@cycle/http';
 import makeHTTPMockDriver from './drivers/mock-http-driver';
 import makeDomReactDriver from './drivers/react-dom-driver';
 import Interact from './drivers/interact-driver';
-import Base from './components/Base/index';
+import Row from './spreadsheet/row';
 import {makeRouterDriver} from 'cyclic-router';
 import {createHashHistory as createHistory} from 'history';
 import switchPath from 'switch-path';
 
 function app(sources) {
-    const base = Base(sources);
+    const base = Row({...sources, count$: xs.of(10), value$: xs.create()});
     return {
         DOM: base.DOM,
-        HTTP: base.HTTP,
-        router: base.router
+        // HTTP: base.HTTP,
+        // router: base.router,
+        // Action: base.Action.debug('Action')
     };
 }
 
@@ -44,5 +45,6 @@ Cycle.run(app, {
             roles: ['pb', 'co'],
             id: '1'
         }))
-    })
+    }),
+    Action: input$ => input$
 });
