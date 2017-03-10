@@ -1,5 +1,5 @@
 before_script:
-- npm i -g create-react-app
+- npm i react-scripts@0.8.4
 language: node_js
 node_js: 6
 cache: node_modules
