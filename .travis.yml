@@ -1,6 +1,5 @@
 before_script:
 - npm i react-scripts@0.8.4
-- npm i -g aws-cli-js
 language: node_js
 node_js: 6
 cache: node_modules
@@ -26,8 +25,11 @@ deploy:
   local_dir: build
   # Set the Cache-Control header.
   cache_control: "max-age=21600"
-#after_deploy:
-#  # Allow `awscli` to make requests to CloudFront.
-#  - aws configure set preview.cloudfront true
-#  # Invalidate every object in the targeted distribution.
-#  - aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_DISTRIBUTION_ID --paths "/*"--paths
+before_install:
+- sudo apt-get install python-pip
+- pip install awscli
+after_deploy:
+  # Allow `awscli` to make requests to CloudFront.
+  - aws configure set preview.cloudfront true
+  # Invalidate every object in the targeted distribution.
+  - aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_DISTRIBUTION_ID --paths "/*"--paths
