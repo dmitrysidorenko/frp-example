@@ -25,8 +25,8 @@ deploy:
   local_dir: build
   # Set the Cache-Control header.
   cache_control: "max-age=21600"
-#after_deploy:
+after_deploy:
   # Allow `awscli` to make requests to CloudFront.
-#  - aws configure set preview.cloudfront true
+  - aws configure set preview.cloudfront true
   # Invalidate every object in the targeted distribution.
-#  - aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_DISTRIBUTION_ID --paths "/*"
+  - aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_DISTRIBUTION_ID --paths "/*"
