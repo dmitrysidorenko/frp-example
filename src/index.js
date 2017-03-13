@@ -1,17 +1,16 @@
 import {default as xs} from 'xstream';
-import React from 'react';
 import Cycle from '@cycle/xstream-run';
 import {makeHTTPDriver} from '@cycle/http';
 import makeHTTPMockDriver from './drivers/mock-http-driver';
 import makeDomReactDriver from './drivers/react-dom-driver';
 import Interact from './drivers/interact-driver';
-import Row from './spreadsheet/row';
+import Spreadsheet from './spreadsheet';
 import {makeRouterDriver} from 'cyclic-router';
-import {createHashHistory as createHistory} from 'history';
+import {makeHashHistoryDriver} from '@cycle/history';
 import switchPath from 'switch-path';
 
 function app(sources) {
-    const base = Row({...sources, count$: xs.of(10), value$: xs.create()});
+    const base = Spreadsheet({...sources, count$: xs.of(10), value$: xs.create(), rowsCount: 4, cellsCount: 4});
     return {
         DOM: base.DOM,
         // HTTP: base.HTTP,
@@ -24,7 +23,7 @@ Cycle.run(app, {
     Interact,
     DOM: makeDomReactDriver(document.getElementById('root')),
     HTTP_: makeHTTPDriver(),
-    router: makeRouterDriver(createHistory(), switchPath),
+    router: makeRouterDriver(makeHashHistoryDriver(), switchPath),
     HTTP: makeHTTPMockDriver({
         'sign-in': xs.of(JSON.stringify({
             firstName: 'John',
