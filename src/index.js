@@ -6,8 +6,8 @@ import makeDomReactDriver from './drivers/react-dom-driver';
 import Interact from './drivers/interact-driver';
 import Spreadsheet from './spreadsheet';
 import {makeRouterDriver} from 'cyclic-router';
-import {makeHashHistoryDriver} from '@cycle/history';
 import switchPath from 'switch-path';
+import {createHashHistory as createHistory} from 'history';
 
 function app(sources) {
     const base = Spreadsheet({...sources, count$: xs.of(10), value$: xs.create(), rowsCount: 4, cellsCount: 4});
@@ -23,7 +23,7 @@ Cycle.run(app, {
     Interact,
     DOM: makeDomReactDriver(document.getElementById('root')),
     HTTP_: makeHTTPDriver(),
-    router: makeRouterDriver(makeHashHistoryDriver(), switchPath),
+    router: makeRouterDriver(createHistory(), switchPath),
     HTTP: makeHTTPMockDriver({
         'sign-in': xs.of(JSON.stringify({
             firstName: 'John',
