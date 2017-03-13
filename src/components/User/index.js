@@ -124,12 +124,7 @@ const User = sources => {
     });
     const user$ = state$.map(extractUserFromState).compose(dropRepeats()).remember();
     const userId$ = user$.filter(R.is(Object)).map(R.prop('id')).remember();
-    const roles$ = user$.map(user => {
-        if (user) {
-            return extractRolesFromUser(user)
-        }
-        return [];
-    }).remember();
+    const roles$ = user$.map(R.ifElse(R.is(Object), extractRolesFromUser, R.always([]))).remember();
     // views
     const signInView$ = makeSignInView(state$, Interact);
     const userInfoView$ = makeUserInfoView(user$, Interact);
@@ -150,7 +145,8 @@ const User = sources => {
         userView$,
         signInView$,
         editRolesView$,
-        HTTP: httpSink$
+        HTTP: httpSink$,
+        Action: signInResponse$.map(r => ({type: 'SIGN_IN', payload: convertUserFromServerResponse(r)}))
     };
 };
 
