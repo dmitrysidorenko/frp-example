@@ -27,7 +27,7 @@ deploy:
   cache_control: "max-age=21600"
 before_install:
 - sudo apt-get install python-pip
-- pip install awscli
+- sudo pip install awscli
 after_deploy:
   # Allow `awscli` to make requests to CloudFront.
   - aws configure set preview.cloudfront true
