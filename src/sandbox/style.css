@@ -1,0 +1,23 @@
+.pre {
+    background-color: antiquewhite;
+    color: #333;
+    display: inline-block;
+    margin: 0;
+}
+
+.winner {
+    background-color: aquamarine;
+}
+
+ul, li {
+    /*margin: 0;*/
+}
+
+.grid {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.pussy {
+
+}
