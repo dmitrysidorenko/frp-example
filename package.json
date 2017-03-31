@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "devDependencies": {
+    "@cycle/dom": "^16.0.0",
+    "@cycle/isolate": "^2.1.0",
+    "cycle-restart": "^0.1.0",
+    "performance-now": "^2.1.0",
     "react-scripts": "0.8.4"
   },
   "dependencies": {
@@ -15,6 +19,7 @@
     "ramda": "^0.22.1",
     "react": "^15.4.1",
     "react-dom": "^15.4.1",
+    "string-similarity": "^1.1.0",
     "switch-path": "^1.2.0",
     "xstream": "^9.2.0"
   },
